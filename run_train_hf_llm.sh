@@ -28,10 +28,10 @@ log_dir="$output_dir/training_logs"
 
 
 #lora
-train_batch_size=4
+train_batch_size=8
 eval_batch_size=8
-gradient_accumulation_steps=24
-eval_accumulation_steps=4
+gradient_accumulation_steps=16
+eval_accumulation_steps=16
 lr="1.5e-4"
 
 #sft
@@ -43,9 +43,12 @@ lr="1.5e-4"
 
 input_seq_length=256
 output_seq_length=140
-num_beans=1
+num_beams=1
 
 epochs_number=20
+eval_steps=50
+logging_steps=5
+
 
 tmux new-session -d -s $run_name
 
@@ -67,6 +70,9 @@ tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' /home/so
     --overwrite_output_dir \
     --output_dir $output_dir \
     --logging_dir $log_dir \
+    --save_steps $eval_steps \
+    --logging_steps $logging_steps \
+    --eval_steps $eval_steps \
     --num_train_epochs $epochs_number \
     --run_name $run_name" ENTER
 
@@ -82,7 +88,7 @@ tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' /home/so
     --max_seq_length $input_seq_length \
     --max_new_tokens $output_seq_length \
     --per_device_eval_batch_size $eval_batch_size \
-    --num_beams $num_beans \
+    --num_beams $num_beams \
     --output_dir $output_dir" ENTER
 
 tmux a -t $run_name

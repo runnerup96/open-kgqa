@@ -5,7 +5,7 @@ CUDA_DEVICE_NUMBER='0'
 seed=1
 
 
-epoch=30
+epoch=100
 train_batch_size=64
 gradient_accumulation_steps=4
 eval_batch_size=64
@@ -24,8 +24,8 @@ save_model_dir="experiments"
 model_name="ai-forever/FRED-T5-1.7B"
 dir_model_name="fred_t5_xxl"
 
-log_steps=10
-eval_steps=10
+log_steps=5
+eval_steps=50
 
 train_file="$project_dir/$data_path/train.json"
 test_file="$project_dir/$data_path/test.json"

@@ -60,7 +60,7 @@ if __name__ == "__main__":
                                                                   predicate_description_dict,
                                                                    tokenizer,
                                                                    max_length=args.max_seq_length,
-                                                                  phase="test",
+                                                                  phase="train",
                                                                   try_one_batch=args.try_one_batch,
                                                                   batch_size=args.per_device_train_batch_size,
                                                                   language='ru')
@@ -70,6 +70,9 @@ if __name__ == "__main__":
 
     tokenized_train_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=training_sft_dataset, device=device)
     tokenized_test_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=testing_sft_dataset, device=device)
+
+    if args.try_one_batch:
+        tokenized_test_sft_dataset = tokenized_train_sft_dataset
 
     print('Training samples total size: ', len(tokenized_train_sft_dataset))
     # model
@@ -103,12 +106,6 @@ if __name__ == "__main__":
 
     num_warmup_steps = int(0.03 * total_train_steps)
 
-    #approx log every 10 steps
-    logging_steps = 10
-    eval_steps = 100
-    #approx save on every epoch
-    save_steps=num_update_steps_per_epoch
-
     # training setup
     training_arguments = TrainingArguments(
         output_dir=args.output_dir,
@@ -117,9 +114,9 @@ if __name__ == "__main__":
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         eval_accumulation_steps=args.gradient_accumulation_steps,
         optim="adamw_torch",
-        save_steps=save_steps,
-        logging_steps=logging_steps,
-        eval_steps=eval_steps,
+        save_steps=args.eval_steps,
+        logging_steps=args.logging_steps,
+        eval_steps=args.eval_steps,
         evaluation_strategy="steps",
         learning_rate=args.learning_rate,
         bf16=True,

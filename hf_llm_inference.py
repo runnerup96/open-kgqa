@@ -35,25 +35,26 @@ if __name__ == "__main__":
     terminators = [
         tokenizer.eos_token_id,
         tokenizer.convert_tokens_to_ids("<|eot_id|>"),
+        tokenizer.convert_tokens_to_ids("}"),
+        335 #'Ġ}'
     ]
 
-
     # read test data
-    testing_sft_dataset = []
+    sft_examples = []
     if args.sparql_dataset_name == "rubq":
         predicate_description_dict = json.load(
             open(args.path_to_predicate_description, 'r'))
         new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
-        # tokenizer.add_tokens(new_rubq_tokens)
+        tokenizer.add_tokens(new_rubq_tokens)
 
         test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
-        testing_sft_dataset = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
+        sft_examples = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
                                                                   predicate_description_dict,
                                                                   tokenizer,
                                                                   max_length=args.max_seq_length,
                                                                   phase="test",
                                                                   try_one_batch=args.try_one_batch,
-                                                                  batch_size=args.per_device_train_batch_size,
+                                                                  batch_size=args.per_device_eval_batch_size,
                                                                   language=args.language)
 
     else:
@@ -72,7 +73,7 @@ if __name__ == "__main__":
     model.generation_config.pad_token_ids = tokenizer.pad_token_id
 
 
-    testing_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(testing_sft_dataset, device)
+    testing_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_examples, device)
     print(f'Total testing samples = {len(testing_sft_dataset)}')
 
     test_dataloader = DataLoader(testing_sft_dataset, shuffle=False, batch_size=args.per_device_eval_batch_size)
@@ -110,7 +111,7 @@ if __name__ == "__main__":
 
     result_dict = dict()
     for id_, pred_query, score in zip(ids_list, prediction_list, scores_list):
-        result_dict[id_] = {
+        result_dict[id_.item()] = {
             "query": pred_query,
             "score": score
         }

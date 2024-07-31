@@ -56,12 +56,9 @@ if __name__ == "__main__":
     my_generation_config = GenerationConfig()
 
     my_generation_config.max_length = script_args.max_output_length
-    # my_generation_config.max_new_tokens = script_args.max_output_length
-    my_generation_config.bos_token_id = tokenizer.bos_token_id
+    my_generation_config.decoder_start_token_id = model.config.decoder_start_token_id
     my_generation_config.eos_token_id = tokenizer.eos_token_id
     my_generation_config.pad_token_id = tokenizer.pad_token_id
-
-    training_args.generation_config = my_generation_config
 
     ids_list = []
     prediction_list = []

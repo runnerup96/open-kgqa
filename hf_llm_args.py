@@ -51,6 +51,8 @@ class ScriptArguments:
 
     save_steps: int = field(default=200, metadata={"help": "Save checkpoint every X updates steps."})
     logging_steps: int = field(default=5, metadata={"help": "Log every X updates steps."})
+    eval_steps: int = field(default=200, metadata={"help": "Eval every X updates steps."})
+
     merge_and_push: Optional[bool] = field(
         default=False,
         metadata={"help": "Merge and push weights after training"},

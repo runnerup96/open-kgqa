@@ -16,11 +16,8 @@ You are text-to-SPARQL assistant. You get QUESTION and all predicate description
 Generate only a correct SPARQL masked query in response:
 """
 
-RU_INSTRUCTION = """
-Ты text-to-SPARQL ассистент. Ты на вход получаешь вопрос пользователя QUESTION и 
-описание всех предикатов графа GRAPH PREDICATES DESCRIPTION. В ответ надо сгенерировать 
-маскированный SPARQL запрос, с SUBJECT и OBJECT масками с соответсвующими индексами. 
-"""
+RU_INSTRUCTION = """Ты text-to-SPARQL ассистент. Ты на вход получаешь вопрос пользователя QUESTION. В ответ надо сгенерировать 
+маскированный SPARQL запрос, с ENTITY масками с соответсвующими индексами на месте сущностей. """
 
 
 PREFIX_CHECKPOINT_DIR = "checkpoint"
@@ -117,11 +114,10 @@ def form_sft_dataset_llm(kgqa_dataset_list, predicate_description_dict, tokenize
 
         user_task = f"QUESTION: {input_text}\n" \
                     # f"GRAPH PREDICATES DESCRIPTION: {predicate_descriptions_str}\n"
+        preprocessed_sparql = preprocessing_utils.preprocess_sparql(sparql)
+        masked_sparql = preprocessing_utils.form_masked_query(preprocessed_sparql)['masked_query']
 
         if phase == 'train':
-
-            preprocessed_sparql = preprocessing_utils.preprocess_sparql(sparql)
-            masked_sparql = preprocessing_utils.form_masked_query(preprocessed_sparql)['masked_query']
 
             chat = [
                 {"role": "system", "content": RU_INSTRUCTION},
@@ -137,9 +133,9 @@ def form_sft_dataset_llm(kgqa_dataset_list, predicate_description_dict, tokenize
             formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
 
         tokenized_prompts = tokenizer(formatted_prompt, max_length=max_length,
-                                      truncation=True, padding=True, add_special_tokens=False,
+                                      truncation=True, padding='max_length', add_special_tokens=False,
                                       return_tensors='pt')
-        sft_dataset_list.append({'id': sample_id, 'tokenized_prompt': tokenized_prompts})
+        sft_dataset_list.append({'id': sample_id, 'tokenized_prompt': tokenized_prompts, "masked_sparql": masked_sparql})
     if try_one_batch:
         sft_dataset_list = sft_dataset_list[:batch_size]
     return sft_dataset_list
