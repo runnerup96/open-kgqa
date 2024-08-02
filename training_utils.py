@@ -109,7 +109,7 @@ def form_sft_dataset_llm(kgqa_dataset_list, graph_entities_str, tokenizer, phase
                          max_length=1024,
                          try_one_batch=False, batch_size=4, language=None):
     sft_dataset_list = []
-    for sample in tqdm(kgqa_dataset_list[:100]):
+    for sample in tqdm(kgqa_dataset_list):
         sample_id = sample["id"]
         if language:
             if language == 'ru':
