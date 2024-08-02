@@ -2,24 +2,21 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
 
-
 @dataclass
 class ScriptArguments:
-
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
 
-    sparql_dataset_name: str = field(default=False, metadata={"help": "Name of dataset to tune on - RUBQ vs ..."})
-    language: str = field(default=None, metadata={"help": "RUBQ language"})
-
+    sparql_dataset_name: str = field(default=False, metadata={"help": "Name of dataset to tune on - rubq vs salute"})
+    language: str = field(default='ru', metadata={"help": "for RUBQ language, Salute in Russian"})
 
     path_to_training_file: str = field(default=None,
-                                       metadata={"help": "Data path to training SPARQL dataset file(RUBQ case)"})
+                                       metadata={"help": "Data path to training SPARQL dataset file"})
     path_to_testing_file: str = field(default=None,
-                                      metadata={"help": "Data path to testing SQL dataset file(PAUQ case)"})
+                                      metadata={"help": "Data path to testing SQL dataset file"})
     path_to_predicate_description: str = field(default=None,
-                                      metadata={"help": "Desription of predicates"})
+                                               metadata={"help": "Desription of predicates"})
     max_seq_length: int = field(
         default=512,
         metadata={
@@ -43,12 +40,12 @@ class ScriptArguments:
     )
 
     num_beams: Optional[int] = field(
-                 default=20,
-                 metadata={
-                     "help": "Number of beams to use for evaluation. This argument will be passed to ``model.generate``, "
-                             "which is used during ``evaluate`` and ``predict``."
-                 },
-             )
+        default=20,
+        metadata={
+            "help": "Number of beams to use for evaluation. This argument will be passed to ``model.generate``, "
+                    "which is used during ``evaluate`` and ``predict``."
+        },
+    )
 
     try_one_batch: bool = field(default=False, metadata={"help": "Try training with one batch"})
 

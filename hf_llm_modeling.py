@@ -16,8 +16,6 @@ from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 from transformers.utils import logging
 import text2query_llm_dataset
 
-
-
 if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -26,7 +24,6 @@ if __name__ == "__main__":
         sys.exit()
 
     logger = logging.get_logger(__name__)
-
 
     parser = HfArgumentParser(hf_llm_args.ScriptArguments)
     args = parser.parse_args_into_dataclasses()[0]
@@ -37,51 +34,79 @@ if __name__ == "__main__":
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
+    model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path,
+                                                 torch_dtype=torch.bfloat16,
+                                                 device_map=device)
+    model.resize_token_embeddings(len(tokenizer))
+    print('Loaded model!')
+
     # read data
     training_sft_dataset, testing_sft_dataset = [], []
     if args.sparql_dataset_name == "rubq":
         predicate_description_dict = json.load(
             open(args.path_to_predicate_description, 'r'))
         new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
+        graph_entities_str = "|".join(new_rubq_tokens)
         tokenizer.add_tokens(new_rubq_tokens)
 
         train_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_training_file)
         training_sft_dataset = training_utils.form_sft_dataset_llm(train_kgqa_dataset,
-                                                                   predicate_description_dict,
-                                                                    tokenizer,
-                                                                    max_length=args.max_seq_length,
-                                                                      phase="train",
-                                                                      try_one_batch=args.try_one_batch,
-                                                                      batch_size=args.per_device_train_batch_size,
+                                                                   graph_entities_str,
+                                                                   tokenizer,
+                                                                   max_length=args.max_seq_length,
+                                                                   phase="train",
+                                                                   try_one_batch=args.try_one_batch,
+                                                                   batch_size=args.per_device_train_batch_size,
                                                                    language='ru')
 
         test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
         testing_sft_dataset = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
-                                                                  predicate_description_dict,
-                                                                   tokenizer,
-                                                                   max_length=args.max_seq_length,
+                                                                  graph_entities_str,
+                                                                  tokenizer,
+                                                                  max_length=args.max_seq_length,
                                                                   phase="train",
                                                                   try_one_batch=args.try_one_batch,
                                                                   batch_size=args.per_device_train_batch_size,
                                                                   language='ru')
 
-    else:
-        print('No such dataset!')
+    elif args.sparql_dataset_name == "salute":
+        predicate_vocab_list = json.load(
+            open(args.path_to_predicate_description, 'r'))
+        new_salute_tokens = predicate_vocab_list
 
-    tokenized_train_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=training_sft_dataset, device=device)
-    tokenized_test_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=testing_sft_dataset, device=device)
+        graph_entities_str = "|".join(new_salute_tokens)
+        tokenizer.add_tokens(new_salute_tokens)
+        model.resize_token_embeddings(len(tokenizer))
+
+        kgqa_train_dataset_list = training_utils.format_salute_to_kgqa_dataset(args.path_to_training_file)
+        training_sft_dataset = training_utils.form_sft_dataset_llm(kgqa_train_dataset_list,
+                                                               graph_entities_str,
+                                                               tokenizer,
+                                                               max_length=args.max_seq_length,
+                                                               phase="train",
+                                                               language='ru',
+                                                               try_one_batch=args.try_one_batch,
+                                                               batch_size=args.per_device_train_batch_size)
+
+        kgqa_test_dataset_list = training_utils.format_salute_to_kgqa_dataset(args.path_to_testing_file)
+        testing_sft_dataset = training_utils.form_sft_dataset_llm(kgqa_test_dataset_list,
+                                                              graph_entities_str,
+                                                              tokenizer,
+                                                              max_length=args.max_seq_length,
+                                                              phase="train",
+                                                              language='ru',
+                                                              try_one_batch=args.try_one_batch,
+                                                              batch_size=args.per_device_eval_batch_size)
+
+    tokenized_train_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=training_sft_dataset,
+                                                                            device=device)
+    tokenized_test_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=testing_sft_dataset,
+                                                                           device=device)
 
     if args.try_one_batch:
         tokenized_test_sft_dataset = tokenized_train_sft_dataset
 
     print('Training samples total size: ', len(tokenized_train_sft_dataset))
-    # model
-
-    model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path,
-                                                 torch_dtype=torch.bfloat16,
-                                                 device_map=device)
-    model.resize_token_embeddings(len(tokenizer))
-    print('Loaded model!')
 
     # following https://arxiv.org/pdf/2305.14314
     peft_config = None
@@ -146,7 +171,6 @@ if __name__ == "__main__":
     # ds_test = text2sql_dataset.Text2SQLDataset(testing_sft_dataset, tokenizer, args.max_seq_length, 'cuda')
     # dl_test = DataLoader(ds_test, batch_size=args.per_device_train_batch_size)
 
-
     trainer = SFTTrainer(
         model=model,
         train_dataset=tokenized_train_sft_dataset,
@@ -166,9 +190,3 @@ if __name__ == "__main__":
     output_dir = os.path.join(args.output_dir, "final_checkpoints")
     trainer.model.save_pretrained(output_dir)
     trainer.tokenizer.save_pretrained(output_dir)
-
-
-
-
-
-

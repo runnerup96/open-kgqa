@@ -12,7 +12,6 @@ import text2query_t5_dataset
 import json
 import training_utils
 
-
 if __name__ == "__main__":
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -27,31 +26,55 @@ if __name__ == "__main__":
 
     set_seed(training_args.seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(script_args.model_name_or_path, model_max_length=script_args.max_seq_length, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(script_args.model_name_or_path,
+                                              model_max_length=script_args.max_seq_length, use_fast=True)
+    model = T5ForConditionalGeneration.from_pretrained(script_args.model_name_or_path).to(device)
+    model.resize_token_embeddings(len(tokenizer))
 
     testing_dataset_list = []
     if script_args.sparql_dataset_name == "rubq":
         predicate_description_dict = json.load(
             open(script_args.path_to_predicate_description, 'r'))
         new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
+        graph_entities_str = "|".join(new_rubq_tokens)
         tokenizer.add_tokens(new_rubq_tokens)
 
         kgqa_test_dataset_list = training_utils.format_rubq_dataset_to_kgqa_dataset(script_args.path_to_testing_file)
         testing_dataset_list = training_utils.form_t5_dataset(kgqa_test_dataset_list,
-                                                        predicate_description_dict,
-                                                          tokenizer,
-                                                          input_max_length=script_args.max_seq_length,
-                                                          output_max_length=script_args.max_output_length,
-                                                          phase="test",
-                                                          language=script_args.language,
-                                                          try_one_batch=script_args.try_one_batch,
-                                                          batch_size=training_args.per_device_train_batch_size)
+                                                              graph_entities_str,
+                                                              tokenizer,
+                                                              input_max_length=script_args.max_seq_length,
+                                                              output_max_length=script_args.max_output_length,
+                                                              phase="test",
+                                                              language=script_args.language,
+                                                              try_one_batch=script_args.try_one_batch,
+                                                              batch_size=training_args.per_device_eval_batch_size)
+
+    elif script_args.sparql_dataset_name == "salute":
+        predicate_vocab_list = json.load(
+            open(script_args.path_to_predicate_description, 'r'))
+        new_salute_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + predicate_vocab_list
+
+        graph_entities_str = "|".join(new_salute_tokens)
+        tokenizer.add_tokens(new_salute_tokens)
+        model.resize_token_embeddings(len(tokenizer))
+
+        kgqa_test_dataset_list = training_utils.format_salute_to_kgqa_dataset(script_args.path_to_testing_file)
+        testing_dataset_list = training_utils.form_t5_dataset(kgqa_test_dataset_list,
+                                                              graph_entities_str,
+                                                              tokenizer,
+                                                              input_max_length=script_args.max_seq_length,
+                                                              output_max_length=script_args.max_output_length,
+                                                              phase="test",
+                                                              language='ru',
+                                                              try_one_batch=script_args.try_one_batch,
+                                                              batch_size=training_args.per_device_train_batch_size)
+
 
     test_dataset = text2query_t5_dataset.T5FinetuneDataset(testing_dataset_list, tokenizer)
     test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=training_args.eval_batch_size)
 
-    model = T5ForConditionalGeneration.from_pretrained(script_args.model_name_or_path).to(device)
-    model.resize_token_embeddings(len(tokenizer))
+
 
     my_generation_config = GenerationConfig()
 
@@ -91,7 +114,6 @@ if __name__ == "__main__":
         for sample_idx in range(len(batch_logits)):
             sequence_scores = batch_logits[sample_idx, :, :].cpu()
             hidden_scores.append(sequence_scores)
-
 
     result_dict = dict()
     for id_, pred_query, score, hiddens in zip(ids_list, prediction_list, scores_list, hidden_scores):

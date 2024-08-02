@@ -16,7 +16,6 @@ from sp_t5_trainer import SemanticParsingSeq2SeqTrainer
 
 
 def main():
-
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     if device == "cpu":
         print('No GPU detected!')
@@ -29,7 +28,8 @@ def main():
 
     set_seed(training_args.seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(script_args.model_name_or_path, model_max_length=script_args.max_seq_length, use_fast=False)
+    tokenizer = AutoTokenizer.from_pretrained(script_args.model_name_or_path,
+                                              model_max_length=script_args.max_seq_length, use_fast=False)
     # Prepare model & optimizer
     model = T5ForConditionalGeneration.from_pretrained(script_args.model_name_or_path)
 
@@ -37,31 +37,65 @@ def main():
     if script_args.sparql_dataset_name == "rubq":
         predicate_description_dict = json.load(
             open(script_args.path_to_predicate_description, 'r'))
+        # TODO: Тут добавляются предикаты раздельно от ns, я бы предложил их вместе попробовать подавать
         new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
+        graph_entities_str = "|".join(new_rubq_tokens)
         tokenizer.add_tokens(new_rubq_tokens)
         model.resize_token_embeddings(len(tokenizer))
 
         kgqa_train_dataset_list = training_utils.format_rubq_dataset_to_kgqa_dataset(script_args.path_to_training_file)
         training_dataset_list = training_utils.form_t5_dataset(kgqa_train_dataset_list,
-                                                           predicate_description_dict,
-                                                           tokenizer,
-                                                           input_max_length=script_args.max_seq_length,
-                                                          output_max_length=script_args.max_output_length,
-                                                           phase="train",
-                                                            language=script_args.language,
-                                                           try_one_batch=script_args.try_one_batch,
-                                                           batch_size=training_args.per_device_train_batch_size)
+                                                               graph_entities_str,
+                                                               tokenizer,
+                                                               input_max_length=script_args.max_seq_length,
+                                                               output_max_length=script_args.max_output_length,
+                                                               phase="train",
+                                                               language=script_args.language,
+                                                               try_one_batch=script_args.try_one_batch,
+                                                               batch_size=training_args.per_device_train_batch_size)
 
         kgqa_test_dataset_list = training_utils.format_rubq_dataset_to_kgqa_dataset(script_args.path_to_testing_file)
         testing_dataset_list = training_utils.form_t5_dataset(kgqa_test_dataset_list,
-                                                        predicate_description_dict,
-                                                          tokenizer,
-                                                          input_max_length=script_args.max_seq_length,
-                                                          output_max_length=script_args.max_output_length,
-                                                          phase="test",
-                                                          language=script_args.language,
-                                                          try_one_batch=script_args.try_one_batch,
-                                                          batch_size=training_args.per_device_train_batch_size)
+                                                              graph_entities_str,
+                                                              tokenizer,
+                                                              input_max_length=script_args.max_seq_length,
+                                                              output_max_length=script_args.max_output_length,
+                                                              phase="test",
+                                                              language=script_args.language,
+                                                              try_one_batch=script_args.try_one_batch,
+                                                              batch_size=training_args.per_device_eval_batch_size)
+
+    elif script_args.sparql_dataset_name == "salute":
+        predicate_vocab_list = json.load(
+            open(script_args.path_to_predicate_description, 'r'))
+        new_salute_tokens = predicate_vocab_list
+
+        graph_entities_str = "|".join(new_salute_tokens)
+        tokenizer.add_tokens(new_salute_tokens)
+        model.resize_token_embeddings(len(tokenizer))
+
+        kgqa_train_dataset_list = training_utils.format_salute_to_kgqa_dataset(script_args.path_to_training_file)
+        training_dataset_list = training_utils.form_t5_dataset(kgqa_train_dataset_list,
+                                                               graph_entities_str,
+                                                               tokenizer,
+                                                               input_max_length=script_args.max_seq_length,
+                                                               output_max_length=script_args.max_output_length,
+                                                               phase="train",
+                                                               language='ru',
+                                                               try_one_batch=script_args.try_one_batch,
+                                                               batch_size=training_args.per_device_train_batch_size)
+
+        kgqa_test_dataset_list = training_utils.format_salute_to_kgqa_dataset(script_args.path_to_testing_file)
+        testing_dataset_list = training_utils.form_t5_dataset(kgqa_test_dataset_list,
+                                                              graph_entities_str,
+                                                              tokenizer,
+                                                              input_max_length=script_args.max_seq_length,
+                                                              output_max_length=script_args.max_output_length,
+                                                              phase="test",
+                                                              language='ru',
+                                                              try_one_batch=script_args.try_one_batch,
+                                                              batch_size=training_args.per_device_eval_batch_size)
+
 
     train_dataset = text2query_t5_dataset.T5FinetuneDataset(training_dataset_list, tokenizer)
     test_dataset = text2query_t5_dataset.T5FinetuneDataset(testing_dataset_list, tokenizer)
@@ -69,8 +103,6 @@ def main():
     if script_args.try_one_batch:
         test_dataset = train_dataset
         testing_dataset_list = training_dataset_list
-
-
 
     optimizer = Adafactor(model.parameters(), lr=training_args.learning_rate,
                           scale_parameter=False, relative_step=False, clip_threshold=1.0,
@@ -84,7 +116,7 @@ def main():
     callbacks_list = []
 
     num_warmup_steps = int(0.1 * total_train_steps)
-    early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=200,
+    early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=training_args.eval_steps * 5,
                                                     early_stopping_threshold=0.01)
     callbacks_list.append(early_stopping_callback)
 
@@ -103,16 +135,7 @@ def main():
     my_generation_config.eos_token_id = tokenizer.eos_token_id
     my_generation_config.pad_token_id = tokenizer.pad_token_id
 
-
-
-    # my_generation_config.max_new_tokens = script_args.max_output_length
-    #
-    # my_generation_config.decoder_start_token_id = tokenizer.pad_token_id
-    # # my_generation_config.bos_token_id = tokenizer.bos_token_id
-    # my_generation_config.pad_token_id = tokenizer.pad_token_id
-    #
     training_args.generation_config = my_generation_config
-
 
     trainer = SemanticParsingSeq2SeqTrainer(
         model=model,

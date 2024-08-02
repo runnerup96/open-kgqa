@@ -2,25 +2,32 @@
 
 
 CUDA_DEVICE_NUMBER='1'
-seed=1
+seed=2
 
 #10
-llama3_model_path="/home/somov/.cache/huggingface/hub/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/c4a54320a52ed5f88b7a2f84496903ea4ff07b45"
+#llama3_model_path="/home/somov/.cache/huggingface/hub/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/c4a54320a52ed5f88b7a2f84496903ea4ff07b45"
 #144
-#llama3_model_path="/home/somov/.cache/huggingface/hub/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/e1945c40cd546c78e41f1151f4db032b271faeaa"
+llama3_model_path="/home/somov/.cache/huggingface/hub/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/e1945c40cd546c78e41f1151f4db032b271faeaa"
 
 
 project_path="/home/somov/open_kgqa"
 save_model_dir="experiments"
+
 dataset_name="rubq"
+dataset_name="salute"
+
 language="ru"
-data_path="data/RuBQ/RuBQ_2.0"
+
+#data_path="data/RuBQ/RuBQ_2.0"
+data_path="data/Salute"
 
 train_file="$project_path/$data_path/train.json"
 test_file="$project_path/$data_path/test.json"
-predicate_mapping="$project_path/$data_path/rubq_predicate_mapping.json"
 
-run_explain_name="lora"
+#predicate_mapping="$project_path/$data_path/rubq_predicate_mapping.json"
+predicate_mapping="$project_path/$data_path/kgqa_query_vocab.json"
+
+run_explain_name="lora_with_preds"
 output_dir="$project_path/$save_model_dir/${dataset_name}_s${seed}_${run_explain_name}"
 run_name="${dataset_name}_s${seed}_${run_explain_name}"
 
@@ -28,10 +35,10 @@ log_dir="$output_dir/training_logs"
 
 
 #lora
-train_batch_size=8
-eval_batch_size=8
-gradient_accumulation_steps=16
-eval_accumulation_steps=16
+train_batch_size=4
+eval_batch_size=4
+gradient_accumulation_steps=24
+eval_accumulation_steps=24
 lr="1.5e-4"
 
 #sft
@@ -41,12 +48,12 @@ lr="1.5e-4"
 #eval_accumulation_steps=48
 #lr="1e-5"
 
-input_seq_length=256
+input_seq_length=1024
 output_seq_length=140
 num_beams=1
 
-epochs_number=20
-eval_steps=50
+epochs_number=3
+eval_steps=20
 logging_steps=5
 
 

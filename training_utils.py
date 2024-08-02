@@ -11,17 +11,15 @@ import json
 from tqdm import tqdm
 import preprocessing_utils
 
-EN_INSTRUCTION = """
-You are text-to-SPARQL assistant. You get QUESTION and all predicate description from user.  
-Generate only a correct SPARQL masked query in response:
-"""
+EN_INSTRUCTION = """You are text-to-SPARQL assistant. Tou recieve user question QUESTION and graph elements GRAPH ENTITIES. \
+You have to generate masked SPARQL query, with ENTITY masks with corresponding indexes."""
 
-RU_INSTRUCTION = """Ты text-to-SPARQL ассистент. Ты на вход получаешь вопрос пользователя QUESTION. В ответ надо сгенерировать 
-маскированный SPARQL запрос, с ENTITY масками с соответсвующими индексами на месте сущностей. """
-
+RU_INSTRUCTION = """Ты text-to-SPARQL ассистент. Ты на вход получаешь вопрос пользователя QUESTION и элементы графа GRAPH ENTITIES. \
+В ответ надо сгенерировать маскированный SPARQL запрос, с ENTITY масками с соответсвующими индексами на месте сущностей. """
 
 PREFIX_CHECKPOINT_DIR = "checkpoint"
 _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
+
 
 class Evaluator:
     def __init__(self):
@@ -37,15 +35,12 @@ class Evaluator:
 
 def generated_query_simple_processor(query):
     query = query.replace('<extra_id_0>', '')
-    query = query.replace('_?', ' ?')
     query = query.strip()
     return query
 
 
 def original_query_simple_processor(query):
-    query = query.replace('<extra_id_0>', '')
-    query = query.replace('_?', ' ?')
-    query = query.strip()
+    # pass
     return query
 
 
@@ -57,12 +52,32 @@ def model_post_processing_function(examples: list, outputs: EvalLoopOutput, toke
 
     decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     predictions = [generated_query_simple_processor(pred) for pred in decoded_preds]
-    raw_references = [original_query_simple_processor(sample['target']) for sample in examples]
+    raw_references = [sample['target'] for sample in examples]
 
     return EvalPrediction(predictions=predictions, label_ids=raw_references)
 
+
 # нужно унифицировать чтение и создание промта для обоих моделей
 # датасет должен просто брать из подготолвленных токенов
+
+
+def format_salute_to_kgqa_dataset(dataset_path):
+    data = json.load(open(dataset_path, 'r'))
+    result_list = list()
+    for idx, sample in enumerate(data):
+        sample_id = idx
+        ru_question = sample['question']
+        sparql = sample['masked_query']
+
+        sample_dict = {
+            "id": sample_id,
+            "ru_question": ru_question,
+            "sparql": sparql,
+        }
+        result_list.append(sample_dict)
+    random.shuffle(result_list)
+    return result_list
+
 
 def format_rubq_dataset_to_kgqa_dataset(dataset_path):
     data = json.load(open(dataset_path, 'r'))
@@ -90,16 +105,59 @@ def format_rubq_dataset_to_kgqa_dataset(dataset_path):
     return result_list
 
 
-def form_sft_dataset_llm(kgqa_dataset_list, predicate_description_dict, tokenizer, phase='train',
+def form_sft_dataset_llm(kgqa_dataset_list, graph_entities_str, tokenizer, phase='train',
                          max_length=1024,
                          try_one_batch=False, batch_size=4, language=None):
-
-
-    predicate_descriptions = [f"{key} : {val[0]}"
-                              for key, val in predicate_description_dict.items()]
-    predicate_descriptions_str = "\n".join(predicate_descriptions)
-
     sft_dataset_list = []
+    for sample in tqdm(kgqa_dataset_list[:100]):
+        sample_id = sample["id"]
+        if language:
+            if language == 'ru':
+                input_lang_key = 'ru_question'
+                instruction = RU_INSTRUCTION
+            else:
+                instruction = EN_INSTRUCTION
+                input_lang_key = 'en_question'
+        else:
+            input_lang_key = 'question'
+            instruction = RU_INSTRUCTION
+        input_text = sample[input_lang_key]
+        sparql = sample["sparql"]
+
+        user_task = f"QUESTION: {input_text}\n" \
+                    f"GRAPH ENTITIES: {graph_entities_str}\n"
+        preprocessed_sparql = preprocessing_utils.preprocess_sparql(sparql)
+        masked_sparql = preprocessing_utils.form_masked_query(preprocessed_sparql)['masked_query']
+
+        if phase == 'train':
+
+            chat = [
+                {"role": "system", "content": instruction},
+                {"role": "user", "content": user_task},
+                {"role": "assistant", "content": masked_sparql}
+            ]
+            formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=False)
+        else:
+            chat = [
+                {"role": "system", "content": instruction},
+                {"role": "user", "content": user_task}
+            ]
+            formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+
+        tokenized_prompts = tokenizer(formatted_prompt, max_length=max_length,
+                                      truncation=True, padding='max_length', add_special_tokens=False,
+                                      return_tensors='pt')
+        sft_dataset_list.append(
+            {'id': sample_id, 'tokenized_prompt': tokenized_prompts, "masked_sparql": masked_sparql})
+    if try_one_batch:
+        sft_dataset_list = sft_dataset_list[:batch_size]
+    return sft_dataset_list
+
+
+def form_t5_dataset(kgqa_dataset_list, graph_entities_str, tokenizer,
+                    phase='train', input_max_length=512,
+                    output_max_length=256, try_one_batch=False, batch_size=4, language=None):
+    dataset_list = []
     for sample in tqdm(kgqa_dataset_list):
         sample_id = sample["id"]
         if language:
@@ -110,57 +168,6 @@ def form_sft_dataset_llm(kgqa_dataset_list, predicate_description_dict, tokenize
         else:
             input_lang_key = 'question'
         input_text = sample[input_lang_key]
-        sparql = sample["sparql"]
-
-        user_task = f"QUESTION: {input_text}\n" \
-                    # f"GRAPH PREDICATES DESCRIPTION: {predicate_descriptions_str}\n"
-        preprocessed_sparql = preprocessing_utils.preprocess_sparql(sparql)
-        masked_sparql = preprocessing_utils.form_masked_query(preprocessed_sparql)['masked_query']
-
-        if phase == 'train':
-
-            chat = [
-                {"role": "system", "content": RU_INSTRUCTION},
-                {"role": "user", "content": user_task},
-                {"role": "assistant", "content": masked_sparql}
-            ]
-            formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=False)
-        else:
-            chat = [
-                {"role": "system", "content": RU_INSTRUCTION},
-                {"role": "user", "content": user_task}
-            ]
-            formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
-
-        tokenized_prompts = tokenizer(formatted_prompt, max_length=max_length,
-                                      truncation=True, padding='max_length', add_special_tokens=False,
-                                      return_tensors='pt')
-        sft_dataset_list.append({'id': sample_id, 'tokenized_prompt': tokenized_prompts, "masked_sparql": masked_sparql})
-    if try_one_batch:
-        sft_dataset_list = sft_dataset_list[:batch_size]
-    return sft_dataset_list
-
-def form_t5_dataset(kgqa_dataset_list, predicate_description_dict, tokenizer,
-                    phase='train', input_max_length=512,
-                    output_max_length=256, try_one_batch=False, batch_size=4, language=None):
-
-    predicate_descriptions = [f"{key} : {val[0]}"
-                             for key, val in predicate_description_dict.items()]
-    predicate_descriptions_str = " | ".join(predicate_descriptions)
-
-    dataset_list = []
-    for sample in kgqa_dataset_list:
-        sample_id = sample["id"]
-        if language:
-            if language == 'ru':
-                input_lang_key = 'ru_question'
-            else:
-                input_lang_key = 'en_question'
-        else:
-            input_lang_key = 'question'
-        input_text = sample[input_lang_key]
-
-        # input_text = input_text + f"| {predicate_descriptions_str}"
 
         sparql = sample["sparql"]
 
@@ -168,27 +175,28 @@ def form_t5_dataset(kgqa_dataset_list, predicate_description_dict, tokenizer,
         masked_sparql = preprocessing_utils.form_masked_query(preprocessed_sparql)
 
         if "fred" in tokenizer.name_or_path.lower():
-            formatted_source = '<LM>Человек: ' + input_text
-            formatted_target = masked_sparql['masked_query']
+            formatted_source = '<SC6>Человек: ' + input_text + " | " + graph_entities_str + '<extra_id_0>'
+            # TODO: At first predict predicates, then the whole query
+            # as in RESDSQL - https://arxiv.org/abs/2302.05965
+            formatted_target = '<extra_id_0>' + masked_sparql['masked_query']
         else:
-            formatted_source = input_text
+            formatted_source = input_text + " | " + graph_entities_str
             formatted_target = masked_sparql['masked_query']
 
         source_tokens = tokenizer.encode(formatted_source, add_special_tokens=False, truncation=True,
-                                        max_length=input_max_length)
+                                         max_length=input_max_length)
 
         target_tokens = tokenizer.encode(formatted_target, add_special_tokens=False, truncation=True,
                                          max_length=output_max_length)
 
         dataset_list.append({'id': sample_id,
-                        'source_tokens': source_tokens,
-                        'target_tokens': target_tokens,
-                        'source': input_text,
-                        'target': masked_sparql['masked_query']})
+                             'source_tokens': source_tokens,
+                             'target_tokens': target_tokens,
+                             'source': input_text,
+                             'target': masked_sparql['masked_query']})
     if try_one_batch:
         dataset_list = dataset_list[:batch_size]
     return dataset_list
-
 
 
 def get_last_checkpoint(folder):
@@ -205,6 +213,7 @@ def get_last_checkpoint(folder):
 
 class TrainingStopCallback(TrainerCallback):
     "A callback that prints a message at the beginning of training"
+
     def __init__(self, steps):
         self.total_training_steps = steps
 
@@ -223,6 +232,7 @@ def maximum_entropy_confidence_score_method(generation_scores, device):
 
     return entropies
 
+
 def truncate_scores(generated_sequences, scores, tokenizer):
     scores_list = []
     for idx in range(len(generated_sequences)):
@@ -238,8 +248,9 @@ def truncate_scores(generated_sequences, scores, tokenizer):
 
     return scores_list
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
+    import os
     dataset_path = '/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/RuBQ_2.0_dev.json'
     pred_map = "/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_predicate_mapping.json"
 
@@ -248,7 +259,7 @@ if __name__ == "__main__":
     model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
     tokenizer = AutoTokenizer.from_pretrained(model_name,
                                               # use_auth_token=True,
-                                              token="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",
+                                              token=os.environ['hf_token'],
                                               force_download=True,
                                               use_fast=False)
     tokenizer.pad_token = tokenizer.eos_token
@@ -262,11 +273,9 @@ if __name__ == "__main__":
     train_kgqa_dataset = format_rubq_dataset_to_kgqa_dataset(dataset_path)
     training_sft_dataset = form_sft_dataset_llm(train_kgqa_dataset,
                                                 predicate_description_dict,
-                                               tokenizer,
-                                               max_length=1024,
-                                               phase="train",
-                                               try_one_batch=False,
-                                               batch_size=8,
+                                                tokenizer,
+                                                max_length=1024,
+                                                phase="train",
+                                                try_one_batch=False,
+                                                batch_size=8,
                                                 language='ru')
-
-

@@ -1,37 +1,52 @@
 #!/bin/bash
 
 
-CUDA_DEVICE_NUMBER='0'
-seed=1
+CUDA_DEVICE_NUMBER='1'
+seed=2
 
 
-epoch=100
-train_batch_size=64
-gradient_accumulation_steps=4
-eval_batch_size=64
+epoch=150
+train_batch_size=8
+gradient_accumulation_steps=32
+eval_batch_size=8
 
-input_length=170
+input_length=1024
 output_length=140
 num_beams=1
 
-lr='1e-4'
+lr='1e-3'
 project_dir="/home/somov/open_kgqa"
-dataset_name="rubq"
+
+#dataset_name="rubq"
+dataset_name="salute"
+
+# rubq
+#epoch=150
+# salute
+epoch=2
+
+
 language="ru"
-data_path="data/RuBQ/RuBQ_2.0"
+
+#data_path="data/RuBQ/RuBQ_2.0"
+data_path="data/Salute"
+
 save_model_dir="experiments"
 
 model_name="ai-forever/FRED-T5-1.7B"
 dir_model_name="fred_t5_xxl"
+run_explain_name="with_preds"
 
 log_steps=5
-eval_steps=50
+eval_steps=100
 
 train_file="$project_dir/$data_path/train.json"
 test_file="$project_dir/$data_path/test.json"
-predicate_mapping="$project_dir/$data_path/rubq_predicate_mapping.json"
 
-run_name="${dir_model_name}_${dataset_name}_s$seed"
+#predicate_mapping="$project_dir/$data_path/rubq_predicate_mapping.json"
+predicate_mapping="$project_dir/$data_path/kgqa_query_vocab.json"
+
+run_name="${dir_model_name}_${dataset_name}_${run_explain_name}_s$seed"
 output_dir="$project_dir/$save_model_dir/$run_name"
 logs_dir="$output_dir/training_logs"
 

@@ -36,29 +36,8 @@ if __name__ == "__main__":
         tokenizer.eos_token_id,
         tokenizer.convert_tokens_to_ids("<|eot_id|>"),
         tokenizer.convert_tokens_to_ids("}"),
-        335 #'Ġ}'
+        335  # 'Ġ}'
     ]
-
-    # read test data
-    sft_examples = []
-    if args.sparql_dataset_name == "rubq":
-        predicate_description_dict = json.load(
-            open(args.path_to_predicate_description, 'r'))
-        new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
-        tokenizer.add_tokens(new_rubq_tokens)
-
-        test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
-        sft_examples = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
-                                                                  predicate_description_dict,
-                                                                  tokenizer,
-                                                                  max_length=args.max_seq_length,
-                                                                  phase="test",
-                                                                  try_one_batch=args.try_one_batch,
-                                                                  batch_size=args.per_device_eval_batch_size,
-                                                                  language=args.language)
-
-    else:
-        print('No such dataset!')
 
     if args.use_lora:
         model = AutoPeftModelForCausalLM.from_pretrained(args.model_name_or_path,
@@ -68,9 +47,47 @@ if __name__ == "__main__":
         model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path,
                                                      torch_dtype=torch.bfloat16,
                                                      device_map='cuda')
-    model.resize_token_embeddings(len(tokenizer))
-
     model.generation_config.pad_token_ids = tokenizer.pad_token_id
+
+    # read test data
+    sft_examples = []
+    if args.sparql_dataset_name == "rubq":
+        predicate_description_dict = json.load(
+            open(args.path_to_predicate_description, 'r'))
+        new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
+        graph_entities_str = "|".join(new_rubq_tokens)
+        tokenizer.add_tokens(new_rubq_tokens)
+        model.resize_token_embeddings(len(tokenizer))
+
+        test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
+        sft_examples = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
+                                                           graph_entities_str,
+                                                           tokenizer,
+                                                           max_length=args.max_seq_length,
+                                                           phase="test",
+                                                           try_one_batch=args.try_one_batch,
+                                                           batch_size=args.per_device_eval_batch_size,
+                                                           language=args.language)
+
+    elif args.sparql_dataset_name == "salute":
+        predicate_vocab_list = json.load(
+            open(args.path_to_predicate_description, 'r'))
+        new_salute_tokens = predicate_vocab_list
+
+        graph_entities_str = "|".join(new_salute_tokens)
+        tokenizer.add_tokens(new_salute_tokens)
+        model.resize_token_embeddings(len(tokenizer))
+
+        test_kgqa_dataset = training_utils.format_salute_to_kgqa_dataset(args.path_to_testing_file)
+        sft_examples = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
+                                                              graph_entities_str,
+                                                              tokenizer,
+                                                              max_length=args.max_seq_length,
+                                                              phase="test",
+                                                              language='ru',
+                                                              try_one_batch=args.try_one_batch,
+                                                              batch_size=args.per_device_eval_batch_size)
+
 
 
     testing_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_examples, device)
@@ -84,18 +101,18 @@ if __name__ == "__main__":
             sample_id = batch['id']
             input_length = batch['input_ids'].shape[1]
             outputs = model.generate(input_ids=batch['input_ids'],
-                                    attention_mask=batch['attention_mask'],
-                                    max_new_tokens=args.max_new_tokens,
-                                    num_beams=args.num_beams,
-                                    eos_token_id=terminators,
-                                    output_logits=True,
-                                    return_dict_in_generate=True,
-                                    pad_token_id=tokenizer.eos_token_id)
+                                     attention_mask=batch['attention_mask'],
+                                     max_new_tokens=args.max_new_tokens,
+                                     num_beams=args.num_beams,
+                                     eos_token_id=terminators,
+                                     output_logits=True,
+                                     return_dict_in_generate=True,
+                                     pad_token_id=tokenizer.eos_token_id)
 
             generated_sequences = outputs["sequences"].cpu() if "cuda" in device else outputs["sequences"]
 
             entropy_scores = training_utils.maximum_entropy_confidence_score_method(generation_scores=outputs["logits"],
-                                                                                                device=device)
+                                                                                    device=device)
             entropy_scores = training_utils.truncate_scores(generated_sequences=generated_sequences,
                                                             scores=entropy_scores,
                                                             tokenizer=tokenizer)
@@ -115,7 +132,6 @@ if __name__ == "__main__":
             "query": pred_query,
             "score": score
         }
-
 
     output_dir = args.output_dir
     if not os.path.exists(output_dir):
@@ -142,9 +158,6 @@ if __name__ == "__main__":
         for query in prediction_list:
             f.write(f"{query}\n")
 
-
-
-
     # model_id = "/home/etutubalina/somov-od/llama3/Meta-Llama-3-8B-Instruct/hf_converted"
     #
     # pipeline = transformers.pipeline("text-generation", model=model_id, model_kwargs={"torch_dtype": torch.bfloat16},
@@ -162,5 +175,3 @@ if __name__ == "__main__":
     # outputs = model.generate(input_ids, max_new_tokens=256, do_sample=True, temperature=0.7)
     # response = tokenizer.decode(outputs[0][input_ids.shape[-1]:], skip_special_tokens=True)
     # print(response)
-
-
