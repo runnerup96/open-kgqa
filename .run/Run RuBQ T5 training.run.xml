@@ -1,0 +1,25 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run RuBQ T5 training" type="PythonConfigurationType" factoryName="Python">
+    <module name="open_kgqa" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="CUDA_VISIBLE_DEVICES" value="0" />
+    </envs>
+    <option name="SDK_HOME" value="sftp://somov@192.168.31.10:22/home/somov/.conda/envs/llm_tuning/bin/python3" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="IS_MODULE_SDK" value="false" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/hf_t5_modeling.py" />
+    <option name="PARAMETERS" value="--model_name_or_path &quot;ai-forever/FRED-T5-1.7B&quot; --sparql_dataset_name rubq --language ru --path_to_training_file /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/train.json --path_to_testing_file /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/test.json --path_to_predicate_description /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_predicate_mapping.json --do_train --do_eval --ignore_data_skip --predict_with_generate --seed 42 --per_device_train_batch_size 8 --per_device_eval_batch_size 8 --learning_rate 0.001 --max_grad_norm 1.0 --num_train_epochs 500 --gradient_accumulation_steps 1 --max_seq_length 1024 --max_output_length 140 --generation_max_length 140 --save_strategy &quot;steps&quot; --evaluation_strategy &quot;steps&quot; --load_best_model_at_end --eval_steps 50 --metric_for_best_model &quot;exact_match&quot; --try_one_batch --save_total_limit 1 --output_dir /home/somov/open_kgqa/experiments/t5_test/ --logging_dir /home/somov/open_kgqa/experiments/t5_test/training_logs --report_to tensorboard" />
+    <option name="SHOW_COMMAND_LINE" value="false" />
+    <option name="EMULATE_TERMINAL" value="false" />
+    <option name="MODULE_MODE" value="false" />
+    <option name="REDIRECT_INPUT" value="false" />
+    <option name="INPUT_FILE" value="" />
+    <method v="2" />
+  </configuration>
+</component>
