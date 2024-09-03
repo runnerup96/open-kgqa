@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run RuBQ LLM training" type="PythonConfigurationType" factoryName="Python">
-    <module name="open_kgqa" />
+    <module name="open-kgqa" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
@@ -13,6 +13,16 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <option name="IS_SUBST" value="false" />
+      <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+      <option name="IS_IGNORE_MISSING_FILES" value="false" />
+      <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+      <ENTRIES>
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+      </ENTRIES>
+    </EXTENSION>
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/hf_llm_modeling.py" />
     <option name="PARAMETERS" value="--model_name /home/somov/.cache/huggingface/hub/models--meta-llama--Meta-Llama-3-8B-Instruct/snapshots/c4a54320a52ed5f88b7a2f84496903ea4ff07b45 --use_lora --sparql_dataset_name rubq --path_to_training_file /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/train.json --path_to_testing_file /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/test.json --path_to_predicate_description /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_predicate_mapping.json --learning_rate 2e-4 --seed 42 --per_device_train_batch_size 4 --gradient_accumulation_steps 1 --max_seq_length 1024 --report_to tensorboard --overwrite_output_dir --output_dir /home/somov/open_kgqa/experiments/llm_test --logging_dir /home/somov/open_kgqa/experiments/llm_test/training_logs --num_train_epochs 20 --save_steps 10 --eval_steps 2 --logging_steps 1 --run_name test_run_lora" />
     <option name="SHOW_COMMAND_LINE" value="false" />

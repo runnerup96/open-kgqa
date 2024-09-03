@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run RuBQ T5 Inference" type="PythonConfigurationType" factoryName="Python">
-    <module name="open_kgqa" />
+    <module name="open-kgqa" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
@@ -12,8 +12,18 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <option name="IS_SUBST" value="false" />
+      <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+      <option name="IS_IGNORE_MISSING_FILES" value="false" />
+      <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+      <ENTRIES>
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+      </ENTRIES>
+    </EXTENSION>
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/hf_t5_inference.py" />
-    <option name="PARAMETERS" value="--model_name_or_path &quot;ai-forever/FRED-T5-large&quot; --sparql_dataset_name rubq --language ru --path_to_testing_file /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/test.json --path_to_predicate_description /home/somov/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_predicate_mapping.json --seed 42 --max_seq_length 164 --max_output_length 140 --per_device_eval_batch_size 8 --eval_accumulation_steps 8 --num_beams 1 --output_dir /home/somov/open_kgqa/experiments/t5_test/ --try_one_batch" />
+    <option name="PARAMETERS" value="--model_name_or_path /raid/home/msbutko/FRED_T5_1.7B --sparql_dataset_name rubq --language ru --path_to_testing_file /raid/home/msbutko/training/open_kgqa/data/RuBQ_2.0/test.json --path_to_predicate_description /raid/home/msbutko/training/open_kgqa/data/RuBQ_2.0/rubq_predicate_mapping.json --seed 42 --max_seq_length 1024 --max_output_length 140 --per_device_eval_batch_size 8 --eval_accumulation_steps 8 --num_beams 1 --output_dir /raid/home/msbutko/training/open_kgqa/experiments/t5_test/" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

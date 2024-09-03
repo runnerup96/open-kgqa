@@ -1,11 +1,10 @@
-#!/bin/bash
+ #!/bin/bash
 
+PYTHON_PATH='/raid/home/msbutko/env_open_kgqa/bin/python3.9'
 
-CUDA_DEVICE_NUMBER='1'
-seed=2
+CUDA_DEVICE_NUMBER='2'
+seed=77
 
-
-epoch=150
 train_batch_size=8
 gradient_accumulation_steps=32
 eval_batch_size=8
@@ -15,36 +14,35 @@ output_length=140
 num_beams=1
 
 lr='1e-3'
-project_dir="/home/somov/open_kgqa"
+project_dir="/raid/home/msbutko/training/open_kgqa"
 
-#dataset_name="rubq"
-dataset_name="salute"
+dataset_name="rubq"
+#dataset_name="salute"
 
 # rubq
-#epoch=150
+epoch=200
 # salute
-epoch=2
-
+# epoch=2
 
 language="ru"
 
-#data_path="data/RuBQ/RuBQ_2.0"
-data_path="data/Salute"
+data_path="data/RuBQ_2.0/"
+#data_path="data/Salute"
 
 save_model_dir="experiments"
 
-model_name="ai-forever/FRED-T5-1.7B"
+model_name="/raid/home/msbutko/FRED_T5_1.7B"
 dir_model_name="fred_t5_xxl"
 run_explain_name="with_preds"
 
 log_steps=5
-eval_steps=100
+eval_steps=50
 
 train_file="$project_dir/$data_path/train.json"
 test_file="$project_dir/$data_path/test.json"
 
-#predicate_mapping="$project_dir/$data_path/rubq_predicate_mapping.json"
-predicate_mapping="$project_dir/$data_path/kgqa_query_vocab.json"
+predicate_mapping="$project_dir/$data_path/rubq_predicate_mapping.json"
+#predicate_mapping="$project_dir/$data_path/kgqa_query_vocab.json"
 
 run_name="${dir_model_name}_${dataset_name}_${run_explain_name}_s$seed"
 output_dir="$project_dir/$save_model_dir/$run_name"
@@ -52,8 +50,8 @@ logs_dir="$output_dir/training_logs"
 
 
 tmux new-session -d -s $run_name
-
-tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' /home/somov/.conda/envs/llm_tuning/bin/python -u hf_t5_modeling.py \
+# добавить PROJECT_PATH
+tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' $PYTHON_PATH -u hf_t5_modeling.py \
                             --model_name_or_path $model_name \
                             --sparql_dataset_name $dataset_name \
                             --language $language \
@@ -80,7 +78,7 @@ tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' /home/so
                             --eval_steps $eval_steps \
                             --save_steps $eval_steps \
                             --eval_accumulation_steps $gradient_accumulation_steps \
-                            --num_beams 1 \
+                            --num_beams $num_beams \
                             --logging_steps $log_steps \
                             --report_to 'tensorboard' \
                             --save_total_limit 1 \
@@ -90,14 +88,24 @@ tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' /home/so
                             --phase 'original'" ENTER
 
 
-#output_dir="/home/somov/naacl_cp_t5/experiments/mt0-base_ml_pauq_xsp_s42"
-#test_file="/home/somov/naacl_cp_t5/data/prepared_data/ru_pauq_xsp/ru_pauq_xsp_test.tsv"
-#eval_batch_size=128
-#run_name="eval_on_ru_pauq_ml"
+##!/bin/bash
+#PYTHON_PATH='/raid/home/msbutko/env_open_kgqa/bin/python3.9'
+#CUDA_DEVICE_NUMBER='2'
+#seed=2
+#language="ru"
+#dataset_name="rubq"
+#input_length=1024
+#output_length=140
+#num_beams=1
+#eval_batch_size=8
+#gradient_accumulation_steps=32
+#output_dir="/raid/home/msbutko/training/open_kgqa/experiments/fred_t5_xxl_rubq_with_preds_s2"
+#test_file="/raid/home/msbutko/training/open_kgqa/data/RuBQ_2.0/test.json"
+#predicate_mapping="/raid/home/msbutko/training/open_kgqa/data/RuBQ_2.0/rubq_predicate_mapping.json"
+#run_name="inference_t5"
 #tmux new-session -d -s $run_name
-#
 
-tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' /home/somov/.conda/envs/llm_tuning/bin/python -u hf_t5_inference.py \
+tmux send-keys -t $run_name "CUDA_VISIBLE_DEVICES='$CUDA_DEVICE_NUMBER' $PYTHON_PATH -u hf_t5_inference.py \
                               --model_name_or_path $output_dir \
                               --sparql_dataset_name $dataset_name \
                               --language $language \

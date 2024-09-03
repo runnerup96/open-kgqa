@@ -1,19 +1,30 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Measure metrics" type="PythonConfigurationType" factoryName="Python">
-    <module name="open_kgqa" />
+  <configuration default="false" name="Measure Exact Match" type="PythonConfigurationType" factoryName="Python" folderName="Metrics">
+    <module name="open-kgqa" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="PROJECT_PATH" value="/raid/home/msbutko/training/open_kgqa/" />
     </envs>
-    <option name="SDK_HOME" value="/opt/anaconda3/bin/python" />
+    <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-    <option name="IS_MODULE_SDK" value="false" />
+    <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/measure_metrics.py" />
-    <option name="PARAMETERS" value="--path_to_preds_pkl $PROJECT_DIR$/experiments/rubq_s2_lora_with_preds/rubq_test_inference_result.pkl --path_to_gold_json $PROJECT_DIR$/data/RuBQ/RuBQ_2.0/test.json --dataset_name rubq" />
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <option name="IS_SUBST" value="false" />
+      <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+      <option name="IS_IGNORE_MISSING_FILES" value="false" />
+      <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+      <ENTRIES>
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
+      </ENTRIES>
+    </EXTENSION>
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/metric_evaluation/measure_exact_match.py" />
+    <option name="PARAMETERS" value="--path_to_preds_pkl /raid/home/msbutko/training/open_kgqa/experiments/fred_t5_xxl_rubq_with_preds_s2/rubq_test_inference_result.pkl --path_to_gold_json /raid/home/msbutko/training/open_kgqa/data/RuBQ_2.0/test.json --dataset_name rubq" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
