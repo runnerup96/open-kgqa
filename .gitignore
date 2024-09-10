@@ -1,6 +1,7 @@
-data/RuBQ
+data
 experiments
 notebooks
 .idea
 __pycache__/
 data/Salute
+_*.json

@@ -75,9 +75,8 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=training_args.eval_batch_size)
 
 
-
+    # TODO: зачем оно тут, если не используется?
     my_generation_config = GenerationConfig()
-
     my_generation_config.max_length = script_args.max_output_length
     my_generation_config.decoder_start_token_id = model.config.decoder_start_token_id
     my_generation_config.eos_token_id = tokenizer.eos_token_id

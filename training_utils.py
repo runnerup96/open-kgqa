@@ -23,7 +23,7 @@ _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
 
 class Evaluator:
     def __init__(self):
-        self.exact_match = evaluate.load('exact_match')
+        self.exact_match = evaluate.load(os.path.join(os.environ['PROJECT_PATH'], 'exact_match.py'))
 
     def evaluate(self, p: EvalPrediction):
         metrics_dict = dict()
@@ -57,8 +57,8 @@ def model_post_processing_function(examples: list, outputs: EvalLoopOutput, toke
     return EvalPrediction(predictions=predictions, label_ids=raw_references)
 
 
-# нужно унифицировать чтение и создание промта для обоих моделей
-# датасет должен просто брать из подготолвленных токенов
+# TODO: нужно унифицировать чтение и создание промта для обоих моделей
+#       датасет должен просто брать из подготолвленных токенов
 
 
 def format_salute_to_kgqa_dataset(dataset_path):
