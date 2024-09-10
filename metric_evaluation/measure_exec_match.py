@@ -37,7 +37,6 @@ if __name__ == "__main__":
     # get id2gold_a and upd cache
     id2gold_answer = dict()
     for id_, gold_query in tqdm(id2gold_query.items()):
-        # id_ = str(id_)
         gold_answer = cache_file[str(id_)] if str(id_) in cache_file else bgc.fetch_query(gold_query)
         id2gold_answer[id_] = gold_answer
         if check_gold_answer(gold_answer):
@@ -53,14 +52,8 @@ if __name__ == "__main__":
     # get id2pred_a without cache
     id2pred_answer = dict()
     for id_, pred_query in tqdm(id2pred_query.items()):
-        # id_ = str(id_)
         pred_answer = bgc.fetch_query(pred_query)
         id2pred_answer[id_] = pred_answer
-
-
-    # res = json.load(open('/Users/20652092/Desktop/open-kgqa/experiments/fred_t5_xxl_rubq_with_preds_s2/exec_match_results.json', 'r'))
-    # id2gold_answer = {id: dic['gold_answer'] for id, dic in res.items() if type(dic) == dict}
-    # id2pred_answer = {id: dic['pred_answer'] for id, dic in res.items() if type(dic) == dict}
 
 
     # check only correct gold cases
@@ -86,14 +79,3 @@ if __name__ == "__main__":
     save_path = os.path.join(output_dir, 'exec_match_results.json')
     json.dump(exec_mathc_result, open(save_path, 'w', encoding='utf-8'), ensure_ascii=False)
     print('Results save at preds path')
-
-
-    # clear PR in git
-
-
-    # анализ ошибок
-    # глазами 50 ошибок линкера
-    # глазами 50 ошибок фреда
-
-    # проверить линкер - есть ли они в графе, есть ли они в тфидф индексе
-
