@@ -5,3 +5,4 @@ notebooks
 __pycache__/
 data/Salute
 _*.json
+.run
