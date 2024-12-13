@@ -49,25 +49,29 @@ if __name__ == "__main__":
         graph_entities_str = "|".join(new_rubq_tokens)
         tokenizer.add_tokens(new_rubq_tokens)
 
-        train_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_training_file)
-        training_sft_dataset = training_utils.form_sft_dataset_llm(train_kgqa_dataset,
-                                                                   graph_entities_str,
-                                                                   tokenizer,
-                                                                   max_length=args.max_seq_length,
-                                                                   phase="train",
-                                                                   try_one_batch=args.try_one_batch,
-                                                                   batch_size=args.per_device_train_batch_size,
-                                                                   language='ru')
+        training_sft_dataset = training_utils.read_rubq_sft_file(args.path_to_training_file)
+        validation_sft_dataset = training_utils.read_rubq_sft_file(args.path_to_training_file)
 
-        test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
-        testing_sft_dataset = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
-                                                                  graph_entities_str,
-                                                                  tokenizer,
-                                                                  max_length=args.max_seq_length,
-                                                                  phase="train",
-                                                                  try_one_batch=args.try_one_batch,
-                                                                  batch_size=args.per_device_train_batch_size,
-                                                                  language='ru')
+
+        # train_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_training_file)
+        # training_sft_dataset = training_utils.form_sft_dataset_llm(train_kgqa_dataset,
+        #                                                            graph_entities_str,
+        #                                                            tokenizer,
+        #                                                            max_length=args.max_seq_length,
+        #                                                            phase="train",
+        #                                                            try_one_batch=args.try_one_batch,
+        #                                                            batch_size=args.per_device_train_batch_size,
+        #                                                            language='ru')
+        #
+        # test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
+        # testing_sft_dataset = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
+        #                                                           graph_entities_str,
+        #                                                           tokenizer,
+        #                                                           max_length=args.max_seq_length,
+        #                                                           phase="train",
+        #                                                           try_one_batch=args.try_one_batch,
+        #                                                           batch_size=args.per_device_train_batch_size,
+        #                                                           language='ru')
 
     elif args.sparql_dataset_name == "salute":
         predicate_vocab_list = json.load(
@@ -99,9 +103,11 @@ if __name__ == "__main__":
                                                               batch_size=args.per_device_eval_batch_size)
 
     tokenized_train_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=training_sft_dataset,
-                                                                            device=device)
+                                                                            device=device, tokenizer=tokenizer,
+                                                                           max_sft_length=args.max_seq_length)
     tokenized_test_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=testing_sft_dataset,
-                                                                           device=device)
+                                                                           device=device, tokenizer=tokenizer,
+                                                                           max_sft_length=args.max_seq_length)
 
     if args.try_one_batch:
         tokenized_test_sft_dataset = tokenized_train_sft_dataset
@@ -158,6 +164,10 @@ if __name__ == "__main__":
     )
 
     response_template = f"<|start_header_id|>assistant<|end_header_id|>\n\n"
+    if args.model_name_or_path.contains("Qwen2.5-Coder"):
+        response_template = "<|im_start|>assistant\n"
+
+
     response_template_ids = tokenizer.encode(response_template, add_special_tokens=False)
     # The assistant answer is ignored during loss calculation
     collator = DataCollatorForCompletionOnlyLM(response_template_ids, tokenizer=tokenizer)

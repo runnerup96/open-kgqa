@@ -11,11 +11,7 @@ import json
 from tqdm import tqdm
 import preprocessing_utils
 
-EN_INSTRUCTION = """You are text-to-SPARQL assistant. Tou recieve user question QUESTION and graph elements GRAPH ENTITIES. \
-You have to generate masked SPARQL query, with ENTITY masks with corresponding indexes."""
 
-RU_INSTRUCTION = """Ты text-to-SPARQL ассистент. Ты на вход получаешь вопрос пользователя QUESTION и элементы графа GRAPH ENTITIES. \
-В ответ надо сгенерировать маскированный SPARQL запрос, с ENTITY масками с соответсвующими индексами на месте сущностей. """
 
 PREFIX_CHECKPOINT_DIR = "checkpoint"
 _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
@@ -31,6 +27,22 @@ class Evaluator:
                                                       ignore_case=True, ignore_punctuation=True, regexes_to_ignore=' ')
         metrics_dict.update(exact_match_metric)
         return metrics_dict
+
+
+def read_rubq_sft_file(dataset_path):
+    df = pd.read_csv(dataset_path, sep='\t', header=None, keep_default_na=False, na_values=['NaN'])
+
+    if df.shape[1] == 2:
+        df.columns = ['id', 'sft']
+
+    sft_examples = list()
+    for id_, sft in zip(df['id'].to_list(), df['source'].tolist()):
+
+        sft = {"id": id_,
+               "sft": sft}
+        sft_examples.append(sft)
+    return sft_examples
+
 
 
 def generated_query_simple_processor(query):

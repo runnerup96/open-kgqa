@@ -1,12 +1,12 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="wikidata_connector" type="PythonConfigurationType" factoryName="Python" folderName="Metrics" nameIsGenerated="true">
-    <module name="open-kgqa" />
+    <module name="open_kgqa" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="/usr/local/bin/python3.10" />
+    <option name="SDK_HOME" value="/opt/anaconda3/bin/python" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/metric_evaluation" />
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
