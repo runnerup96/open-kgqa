@@ -7,3 +7,8 @@ You have to generate SPARQL query based on the provided data."""
 
 RU_INSTRUCTION = """Ты text-to-SPARQL ассистент. Ты на вход получаешь вопрос пользователя QUESTION и элементы графа GRAPH ENTITIES. \
 В ответ надо сгенерировать маскированный SPARQL запрос, с ENTITY масками с соответсвующими индексами на месте сущностей. """
+
+INSTRUCTIONS = {
+    'en': EN_INSTRUCTION,
+    'ru': RU_INSTRUCTION
+}
