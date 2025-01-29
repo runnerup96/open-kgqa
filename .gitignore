@@ -6,3 +6,6 @@ __pycache__/
 data/Salute
 _*.json
 .run
+.DS_Store
+.ipynb_checkpoints/
+*.log
