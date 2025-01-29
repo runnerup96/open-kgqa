@@ -29,21 +29,6 @@ class Evaluator:
         return metrics_dict
 
 
-def read_rubq_sft_file(dataset_path):
-    df = pd.read_csv(dataset_path, sep='\t', header=None, keep_default_na=False, na_values=['NaN'])
-
-    if df.shape[1] == 2:
-        df.columns = ['id', 'sft']
-
-    sft_examples = list()
-    for id_, sft in zip(df['id'].to_list(), df['source'].tolist()):
-
-        sft = {"id": id_,
-               "sft": sft}
-        sft_examples.append(sft)
-    return sft_examples
-
-
 
 def generated_query_simple_processor(query):
     query = query.replace('<extra_id_0>', '')

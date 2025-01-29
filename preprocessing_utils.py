@@ -7,6 +7,42 @@ def is_schema_token(token, schema_componenents):
     return False
 
 
+def replace_preds(sparql, preds_dict):
+    preds = re.findall(r'wdt:P\d+', sparql)
+    reformatted_sparql = sparql
+
+    # fix wdt:P31/wdt:P279* case
+
+    if "wdt:P31/wdt:P279*" in reformatted_sparql:
+        reformatted_sparql = reformatted_sparql.replace("wdt:P31/wdt:P279*", "instance_of")
+
+    for pred in preds:
+        clean_pred = pred.split(':')[-1]
+        if clean_pred in preds_dict:
+            pred_desc = "_".join(preds_dict[clean_pred]['label'].split())
+            reformatted_sparql = reformatted_sparql.replace(pred, pred_desc)
+
+    return reformatted_sparql
+
+
+def replace_strings(sparql, preds_dict):
+    preds = re.findall(r'wdt:P\d+', sparql)
+    reformatted_sparql = sparql
+
+    # fix wdt:P31/wdt:P279* case
+
+    if "wdt:P31/wdt:P279*" in reformatted_sparql:
+        reformatted_sparql = reformatted_sparql.replace("wdt:P31/wdt:P279*", "instance_of")
+
+    for pred in preds:
+        clean_pred = pred.split(':')[-1]
+        if clean_pred in preds_dict:
+            pred_desc = "_".join(preds_dict[clean_pred]['label'].split())
+            reformatted_sparql = reformatted_sparql.replace(pred, pred_desc)
+
+    return reformatted_sparql
+
+
 def preprocess_sparql(sparql):
     # make tokenization easier
     sparql = sparql.replace('\n', ' ')

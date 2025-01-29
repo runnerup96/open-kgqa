@@ -12,6 +12,7 @@ import os
 from transformers import set_seed
 from tqdm import tqdm
 import text2query_llm_dataset
+from lmm_mapping_constants import LLM_MAPPING_DICT
 from torch.utils.data import DataLoader
 
 if __name__ == "__main__":
@@ -34,7 +35,6 @@ if __name__ == "__main__":
 
     terminators = [
         tokenizer.eos_token_id,
-        tokenizer.convert_tokens_to_ids("<|eot_id|>"),
         tokenizer.convert_tokens_to_ids("}"),
         335  # 'Ġ}'
     ]
@@ -50,50 +50,26 @@ if __name__ == "__main__":
     model.generation_config.pad_token_ids = tokenizer.pad_token_id
 
     # read test data
-    sft_examples = []
+    testing_sft_dataset = []
     if args.sparql_dataset_name == "rubq":
         predicate_description_dict = json.load(
             open(args.path_to_predicate_description, 'r'))
         new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
-        graph_entities_str = "|".join(new_rubq_tokens)
         tokenizer.add_tokens(new_rubq_tokens)
         model.resize_token_embeddings(len(tokenizer))
 
-        test_kgqa_dataset = training_utils.format_rubq_dataset_to_kgqa_dataset(args.path_to_testing_file)
-        sft_examples = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
-                                                           graph_entities_str,
-                                                           tokenizer,
-                                                           max_length=args.max_seq_length,
-                                                           phase="test",
-                                                           try_one_batch=args.try_one_batch,
-                                                           batch_size=args.per_device_eval_batch_size,
-                                                           language=args.language)
+        testing_sft_dataset = json.load(open(args.path_to_testing_file, 'r'))
 
-    elif args.sparql_dataset_name == "salute":
-        predicate_vocab_list = json.load(
-            open(args.path_to_predicate_description, 'r'))
-        new_salute_tokens = predicate_vocab_list
+    if args.try_one_batch:
+        testing_sft_dataset = testing_sft_dataset[:args.per_device_eval_batch_size]
 
-        graph_entities_str = "|".join(new_salute_tokens)
-        tokenizer.add_tokens(new_salute_tokens)
-        model.resize_token_embeddings(len(tokenizer))
+    tokenized_test_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_dataset=testing_sft_dataset,
+                                                                           device=device, tokenizer=tokenizer,
+                                                                           max_sft_length=args.max_seq_length)
 
-        test_kgqa_dataset = training_utils.format_salute_to_kgqa_dataset(args.path_to_testing_file)
-        sft_examples = training_utils.form_sft_dataset_llm(test_kgqa_dataset,
-                                                              graph_entities_str,
-                                                              tokenizer,
-                                                              max_length=args.max_seq_length,
-                                                              phase="test",
-                                                              language='ru',
-                                                              try_one_batch=args.try_one_batch,
-                                                              batch_size=args.per_device_eval_batch_size)
+    print(f'Total testing samples = {len(tokenized_test_sft_dataset)}')
 
-
-
-    testing_sft_dataset = text2query_llm_dataset.LlmFinetuneDataset(sft_examples, device)
-    print(f'Total testing samples = {len(testing_sft_dataset)}')
-
-    test_dataloader = DataLoader(testing_sft_dataset, shuffle=False, batch_size=args.per_device_eval_batch_size)
+    test_dataloader = DataLoader(tokenized_test_sft_dataset, shuffle=False, batch_size=args.per_device_eval_batch_size)
 
     ids_list, prediction_list, scores_list = [], [], []
     with torch.no_grad():
@@ -128,7 +104,7 @@ if __name__ == "__main__":
 
     result_dict = dict()
     for id_, pred_query, score in zip(ids_list, prediction_list, scores_list):
-        result_dict[id_.item()] = {
+        result_dict[id_] = {
             "query": pred_query,
             "score": score
         }
