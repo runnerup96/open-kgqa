@@ -4,7 +4,7 @@ import random
 from tqdm import tqdm
 from prompts import INSTRUCTIONS
 from transformers import AutoTokenizer
-from preprocessing_utils import preprocess_sparql
+from preprocessing_utils import preprocess_sparql, replace_preds
 
 def map_wikidata_urls_to_prefix(sparql_query):
     prefix_pattern = r"PREFIX\s+(\w+):\s+<([^>]+)>"
@@ -52,16 +52,14 @@ def format_id2alias(id2alias, lang):
     alias_string = ", ".join(alias_string_list)
     return alias_string
 
-def format_sft_sample(question, alias_string, graph_preds, graph_namespaces):
+def format_sft_sample(question, alias_string):
     sft_prompt = f"""
                 QUESTION: {question}
                 QUESTION ENTITIES: {alias_string}
-                KNOWLEDGE GRAPH NAMESPACES: {graph_namespaces}
-                KNOWLEDGE GRAPH PREDICATES: {graph_preds}
                 """
     return sft_prompt
 
-def preprocess_qald(data, tokenizer, phase='train', lang='en'):
+def preprocess_qald(data, tokenizer, relations_description, phase='train', lang='en'):
     sft_dataset = []
     failed_samples = []
     all_entities = set()
@@ -88,6 +86,7 @@ def preprocess_qald(data, tokenizer, phase='train', lang='en'):
 
             # clean query from prefixes and urls
             sparql = preprocess_sparql(map_wikidata_urls_to_prefix(query))
+            sparql_masked = replace_preds(sparql, relations_description)
             sample_id = str(item['id'])
 
             question = next(filter(lambda q: q['language'] == lang, item['question']))['string']
@@ -95,12 +94,13 @@ def preprocess_qald(data, tokenizer, phase='train', lang='en'):
 
             alias_string = format_id2alias(id2alias, "en")
 
-            user_task = format_sft_sample(question, alias_string, knowledge_graph_predicates, knowledge_graph_namespaces)
+            user_task = format_sft_sample(question, alias_string)
+
             if phase == 'train':
                 chat = [
                     {"role": "system", "content": instruction},
                     {"role": "user", "content": user_task},
-                    {"role": "assistant", "content": sparql}
+                    {"role": "assistant", "content": sparql_masked}
                 ]
                 formatted_prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=False)
             else:
@@ -274,6 +274,9 @@ def preprocess_pat(pat_singlehop, pat_multihop, tokenizer, phase='train', lang='
 
 if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-Coder-0.5B", model_max_length=256, use_fast=False)
+    relations_description = json.load(open("../data/other/relations.json", 'r'))
+
+
 
     # qald_data = json.load(open('../data/qald/qald_train.json'))
     # preprocess_qald(qald_data['questions'], tokenizer, phase='train')

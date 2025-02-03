@@ -41,24 +41,26 @@ if __name__ == "__main__":
 
     if args.use_lora:
         model = AutoPeftModelForCausalLM.from_pretrained(args.model_name_or_path,
-                                                         device_map="cuda", torch_dtype=torch.bfloat16)
+                                                         torch_dtype=torch.float16,
+                                                         device_map=device)
         model = model.merge_and_unload()
     else:
         model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path,
-                                                     torch_dtype=torch.bfloat16,
-                                                     device_map='cuda')
+                                                     torch_dtype=torch.float16,
+                                                     device_map=device)
     model.generation_config.pad_token_ids = tokenizer.pad_token_id
 
     # read test data
     testing_sft_dataset = []
-    if args.sparql_dataset_name == "rubq":
-        predicate_description_dict = json.load(
-            open(args.path_to_predicate_description, 'r'))
-        new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
-        tokenizer.add_tokens(new_rubq_tokens)
-        model.resize_token_embeddings(len(tokenizer))
 
-        testing_sft_dataset = json.load(open(args.path_to_testing_file, 'r'))
+    # predicate_description_dict = json.load(
+    #     open(args.path_to_predicate_description, 'r'))
+
+    new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:']
+    tokenizer.add_tokens(new_rubq_tokens)
+    model.resize_token_embeddings(len(tokenizer))
+
+    testing_sft_dataset = json.load(open(args.path_to_testing_file, 'r'))
 
     if args.try_one_batch:
         testing_sft_dataset = testing_sft_dataset[:args.per_device_eval_batch_size]
@@ -76,8 +78,8 @@ if __name__ == "__main__":
         for batch in tqdm(test_dataloader):
             sample_id = batch['id']
             input_length = batch['input_ids'].shape[1]
-            outputs = model.generate(input_ids=batch['input_ids'],
-                                     attention_mask=batch['attention_mask'],
+            outputs = model.generate(input_ids=batch['input_ids'].to(device),
+                                     attention_mask=batch['attention_mask'].to(device),
                                      max_new_tokens=args.max_new_tokens,
                                      num_beams=args.num_beams,
                                      eos_token_id=terminators,

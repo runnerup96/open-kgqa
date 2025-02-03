@@ -42,15 +42,12 @@ if __name__ == "__main__":
 
     # read data
     training_sft_dataset, validation_sft_dataset = [], []
-    if args.sparql_dataset_name == "rubq":
-        predicate_description_dict = json.load(
-            open(args.path_to_predicate_description, 'r'))
-        new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'] + list(predicate_description_dict.keys())
-        tokenizer.add_tokens(new_rubq_tokens)
-        model.resize_token_embeddings(len(tokenizer))
+    new_rubq_tokens = ['wdt:', 'skos:', 'wd:', 'ps:', 'pq:']
+    tokenizer.add_tokens(new_rubq_tokens)
+    model.resize_token_embeddings(len(tokenizer))
 
-        training_sft_dataset = json.load(open(args.path_to_training_file, 'r'))
-        validation_sft_dataset = json.load(open(args.path_to_testing_file, 'r'))
+    training_sft_dataset = json.load(open(args.path_to_training_file, 'r'))
+    validation_sft_dataset = json.load(open(args.path_to_testing_file, 'r'))
 
     if args.try_one_batch:
         training_sft_dataset = training_sft_dataset[:args.per_device_train_batch_size]

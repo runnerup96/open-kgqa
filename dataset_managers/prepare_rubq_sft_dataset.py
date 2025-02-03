@@ -100,19 +100,19 @@ def format_source_dataset(rubq_dataset, phase):
 
 if __name__ == "__main__":
 
-    rubq_train = json.load(open('/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/train_with_aliases.json', 'r'))
-    rubq_test = json.load(open('/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/test_with_aliases.json', 'r'))
+    rubq_train = json.load(open('../data/other/train_with_aliases.json', 'r'))
+    rubq_test = json.load(open('../data/other/test_with_aliases.json', 'r'))
 
     language = 'en'
 
-    predicate_description_dict = json.load(open("/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_predicate_mapping.json", 'r'))
+    predicate_description_dict = json.load(open("../data/other/rubq_predicate_mapping.json", 'r'))
     knowledge_graph_predicates = ", ".join(list(predicate_description_dict.keys()))
     knowledge_graph_namespaces = ", ".join(['wdt:', 'skos:', 'wd:', 'ps:', 'pq:'])
 
     # TODO: Нужно собрать полный словарь всех придикатов и квалификаторов
-    relations_description = json.load(open("/Users/somov-od/Documents/phd/projects/open_kgqa/dataset_managers/relations.json", 'r'))
+    relations_description = json.load(open("../data/other/relations.json", 'r'))
 
-    predicate_description_dict = json.load(open("/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_predicate_mapping.json", 'r'))
+    predicate_description_dict = json.load(open("../data/other/rubq_predicate_mapping.json", 'r'))
 
     phase = 'train'
 
@@ -123,19 +123,19 @@ if __name__ == "__main__":
     test_sft_examples_list, test_failed_samples = format_source_dataset(rubq_test, 'test')
 
 
-    json.dump(train_sft_examples_list, open("/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_sft_train_no_preds.json", 'w'),
+    json.dump(train_sft_examples_list, open("../data/other/rubq_sft_train_no_preds.json", 'w'),
               ensure_ascii=False, indent=4)
 
     json.dump(train_for_test_sft_examples_list,
-              open("/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_sft_train_for_test.json", 'w'),
+              open("../data/other/rubq_sft_train_for_test.json", 'w'),
               ensure_ascii=False, indent=4)
 
     json.dump(valid_sft_examples_list,
-              open("/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_sft_valid_no_preds.json", 'w'),
+              open("../data/other/rubq_sft_valid_no_preds.json", 'w'),
               ensure_ascii=False, indent=4)
 
     json.dump(test_sft_examples_list,
-              open("/Users/somov-od/Documents/phd/projects/open_kgqa/data/RuBQ/RuBQ_2.0/rubq_sft_test_no_preds.json", 'w'),
+              open("../data/other/rubq_sft_test_no_preds.json", 'w'),
               ensure_ascii=False, indent=4)
 
 

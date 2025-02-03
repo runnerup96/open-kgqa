@@ -12,7 +12,6 @@ from tqdm import tqdm
 import preprocessing_utils
 
 
-
 PREFIX_CHECKPOINT_DIR = "checkpoint"
 _re_checkpoint = re.compile(r"^" + PREFIX_CHECKPOINT_DIR + r"\-(\d+)$")
 

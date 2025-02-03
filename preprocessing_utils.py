@@ -16,13 +16,34 @@ def replace_preds(sparql, preds_dict):
     if "wdt:P31/wdt:P279*" in reformatted_sparql:
         reformatted_sparql = reformatted_sparql.replace("wdt:P31/wdt:P279*", "instance_of")
 
+    replacement = {}
+
     for pred in preds:
         clean_pred = pred.split(':')[-1]
         if clean_pred in preds_dict:
             pred_desc = "_".join(preds_dict[clean_pred]['label'].split())
             reformatted_sparql = reformatted_sparql.replace(pred, pred_desc)
+            replacement[pred_desc] = pred
 
-    return reformatted_sparql
+    return reformatted_sparql, replacement
+
+
+def replace_labels_in_sparql(query: str, revert_dict: dict) -> str:
+    sparql_keywords = {
+        "select", "where", "distinct", "count", "filter", "optional", "group", "by",
+        "order", "limit", "offset", "union", "bind", "values", "minus", "exists", "not"
+    }
+
+    tokens = re.split(r'(\W)', query)
+
+    for i, token in enumerate(tokens):
+        if token in revert_dict and not token.startswith('?') and token.lower() not in sparql_keywords:
+            tokens[i] = revert_dict[token]  # Replace with Wikidata ID
+
+    # Reconstruct the query
+    replaced_query = ''.join(tokens)
+
+    return replaced_query
 
 
 def replace_strings(sparql, preds_dict):
